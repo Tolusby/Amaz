@@ -1,0 +1,206 @@
+---
+title: "Amazon Sales Analysis"
+author: "Tolu Sobayo"
+date: "2025-03-17"
+output: word_document
+---
+
+# Amazon Sales Analysis
+
+## Objective
+This report analyzes the amazon sales report in India from kaggle using R. Exploratory data analysis will be carried out on the data set for fact finding and machine learning models will be built for price prediction. 
+
+
+Kaggle url = https://www.kaggle.com/datasets/thedevastator/unlock-profits-with-e-commerce-sales-data
+
+## Dataset Outline
+Index: Sequential identifier for data rows.
+
+Order ID: Unique identifier for each order.
+
+Date: Date of the transaction.
+
+Status: Current status of the order (e.g., fulfilled, pending, canceled).
+
+Fulfilment: Method or party responsible for fulfillment.
+
+Sales Channel: Platform or channel through which the sale occurred.
+
+Ship Service: Shipping service used for delivery.
+
+Style: Product style or variation.
+
+SKU: Stock Keeping Unit, used to track products.
+
+Category: Product category or classification.
+
+Size: Product size (if applicable).
+
+ASIN: Amazon Standard Identification Number for products.
+
+Courier: Shipping courier used for delivery.
+
+STZ: A code or identifier likely related to shipping or storage zones.
+
+Quantity (Qty): Number of items sold in the order.
+
+Currency: Currency used for the transaction.
+
+Amount: Total amount for the order.
+
+Ship City: City where the product is shipped.
+
+Ship State: State or region of the shipping address.
+
+Ship Postal: Postal or ZIP code for shipping.
+
+Ship Country: Country of the shipping address.
+
+Promotion: Indicates whether a promotion was applied to the order.
+
+B2B: Specifies if the transaction was business-to-business.
+
+Fulfilled By: Entity responsible for fulfilling the order (e.g., Amazon or third-party seller).
+
+## Importing Dependences
+
+```{r}
+# Installing packages needed
+install.packages("tidyverse")
+install.packages("naniar")
+install.packages("gtExtras")
+install.packages("cowplot")
+install.packages("car")
+install.packages("caret")
+install.packages("stringr")
+install.packages("corrplot")
+install.packages("readxl")
+library(readxl)
+library(stringr)
+library(tidyverse)
+library(naniar)
+library(gtExtras)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(cowplot)
+library(car)
+library(caret)
+library(corrplot)
+
+```
+
+
+##Importing Data
+```{r}
+sales<- read.csv("Amazon Data/Amazon Sale Report.csv", header=TRUE,stringsAsFactors = FALSE)
+head(sales)
+```
+
+## Data Preprocessing
+Missing data will be checked here 
+```{r}
+# Check for missing values in the entire dataset
+missing_values <- is.na(sales)
+
+# Summarize the missing values by column
+colSums(missing_values)
+```
+The missing data code shows that there are 33 missing data in ship postal.code  and 7795 missing cells in amount, the missing amounts are for canceled orders so all the cells will be dropped.
+
+```{r}
+#Dropping the rows with missing values.
+cleaned_sales <- na.omit(sales)
+
+```
+
+## Exploratory Data Analysis
+1. Total Amount of sales by Fullfillment.
+```{r}
+sales_by_fulfillment <- cleaned_sales %>%
+  group_by(Fulfilment) %>%
+  summarise(Total_Sales = sum(Amount, na.rm = TRUE))
+print(sales_by_fulfillment)
+```
+```{r}
+
+# Create pie chart
+ggplot(data = sales_by_fulfillment, aes(x = "", y = Total_Sales, fill = Fulfilment)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Total Sales by Fulfillment",
+       x = NULL,
+       y = NULL,
+       fill = "Fulfillment Method") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank()) +
+  scale_y_continuous(labels = scales::comma)
+```
+As shown 54 million of the sales are from Amazon.
+
+2. Which sizes of clothes sale the most?
+```{r}
+sales_by_size <- cleaned_sales %>%
+  group_by(Size) %>%
+  summarise(Total_Sales = sum(Amount, na.rm = TRUE))%>%
+  arrange(desc(Total_Sales))
+print(sales_by_size)
+
+```
+```{r}
+#Visualizing in a bar chart.
+ggplot(data = sales_by_size, aes(x = Size, y = Total_Sales)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(title = "Total Sales by SIze",
+       x = "Size",
+       y = "Total Sales") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma)
+
+```
+Medium sales the most followed by Large and Extra Large.
+
+3. Which categories do customers by more of in quantity?
+```{r}
+category_by_qua <- cleaned_sales %>%
+  group_by(Category) %>%
+  summarise(Total_Quantity = sum(Qty, na.rm = TRUE))%>%
+  arrange(desc(Total_Quantity))
+print(category_by_qua)
+```
+Sets are the most sold items.
+
+```{r}
+ggplot(data = category_by_qua, aes(x = Category, y = Total_Quantity)) +
+  geom_bar(stat = "identity", color = "red") +
+  labs(title = "Category by Total Quantity Sold",
+       x = "Category",
+       y = "Total Quantity") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma)
+
+```
+
+
+4.How many multiple orders are present.
+```{r}
+hist(cleaned_sales$Qty)
+```
+Most of the customers only ordered once
+
+## Correlation
+1. Is there any correlation between quantity and size ?
+
+```{r}
+#Creating a data frame for just the numeric parts of the dataset.
+for_cor<-cleaned_sales%>%
+  select(Qty, Amount)
+#Finding the correlation
+cor(for_cor)
+```
+With a Value of 0.06 there is no statistically significant correlation between qty and amount in the amazon data we have.
+
+```
+
